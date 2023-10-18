@@ -1,101 +1,83 @@
+// Import the CSS file
 import "./style.css";
 
+// Get the app container
 const app: HTMLDivElement = document.querySelector("#app")!;
 
-const gameName = "My game";
-
+// Set the game name and document title
+const gameName = "My Drawing Board";
 document.title = gameName;
 
+// Create and append header
 const header = document.createElement("h1");
 header.innerHTML = gameName;
 app.append(header);
 
-// Add the canvas element
+// Create and append canvas
 const canvas = document.createElement("canvas");
 canvas.width = 256;
 canvas.height = 256;
 app.appendChild(canvas);
 
-// Add canvas 2D context
+// Get the 2D context of the canvas
 const ctx = canvas.getContext("2d")!;
 
+// Variables for storing drawing state
 let drawing = false;
-
-// Listen for mouse down event to start drawing
-canvas.addEventListener("mousedown", () => {
-  drawing = true;
-});
-
-// Listen for mouse move event to draw on canvas
-canvas.addEventListener("mousemove", (event) => {
-  if (!drawing) return;
-  ctx.fillStyle = "black";
-  ctx.fillRect(
-    event.clientX - canvas.offsetLeft,
-    event.clientY - canvas.offsetTop,
-    5,
-    5
-  );
-});
-
-// Listen for mouse up event to stop drawing
-canvas.addEventListener("mouseup", () => {
-  drawing = false;
-});
-
-// Add a clear button to clear the canvas
-const clearButton = document.createElement("button");
-clearButton.innerHTML = "Clear";
-clearButton.addEventListener("click", () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-});
-
-app.appendChild(clearButton);
-
-// Initialize variables for storing strokes
 let currentStroke: { x: number; y: number }[] = [];
 let allStrokes: { x: number; y: number }[][] = [];
 
-// Create a custom drawing-changed event
+// Custom event to notify changes in drawing
 const drawEvent = new Event("drawing-changed");
 
-// Function to redraw the canvas
+// Function to redraw the canvas based on stored points
 const redrawCanvas = () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.beginPath();
+  // Iterate through all strokes and draw them
   allStrokes.forEach((stroke) => {
+    if (stroke.length === 0) return;
+    ctx.moveTo(stroke[0].x, stroke[0].y);
     stroke.forEach((point) => {
-      ctx.fillStyle = "black";
-      ctx.fillRect(point.x, point.y, 5, 5);
+      ctx.lineTo(point.x, point.y);
     });
+    ctx.stroke();
   });
+  ctx.closePath();
 };
 
-// Add an observer for the drawing-changed event
+// Listen for custom drawing-changed event and redraw canvas
 canvas.addEventListener("drawing-changed", redrawCanvas);
 
-// Update the mouse down event to start a new stroke
-canvas.addEventListener("mousedown", () => {
+// Handle mouse down event
+canvas.addEventListener("mousedown", (event) => {
   drawing = true;
-  currentStroke = [];
+  const x = event.clientX - canvas.offsetLeft;
+  const y = event.clientY - canvas.offsetTop;
+  currentStroke = [{ x, y }];
 });
 
-// Update the mouse move event to save points and dispatch drawing-changed event
+// Handle mouse move event
 canvas.addEventListener("mousemove", (event) => {
   if (!drawing) return;
   const x = event.clientX - canvas.offsetLeft;
   const y = event.clientY - canvas.offsetTop;
   currentStroke.push({ x, y });
-  canvas.dispatchEvent(drawEvent);
 });
 
-// Update the mouse up event to save the stroke
+// Handle mouse up event
 canvas.addEventListener("mouseup", () => {
   drawing = false;
   allStrokes.push(currentStroke);
+  canvas.dispatchEvent(drawEvent); // Trigger drawing change
 });
 
-// Update the Clear button to clear all strokes and dispatch drawing-changed event
+// Create and append Clear button
+const clearButton = document.createElement("button");
+clearButton.innerHTML = "Clear";
 clearButton.addEventListener("click", () => {
   allStrokes = [];
-  canvas.dispatchEvent(drawEvent);
+  canvas.dispatchEvent(drawEvent); // Clear canvas
 });
+
+app.appendChild(clearButton);
