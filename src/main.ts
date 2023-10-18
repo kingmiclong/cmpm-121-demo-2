@@ -16,7 +16,7 @@ interface Preview {
 const app: HTMLDivElement = document.querySelector("#app")!;
 
 // Set the game name and document title
-const gameName = "My Drawing Board";
+const gameName = "Michael Leung's Playboard";
 document.title = gameName;
 
 // Create and append header
@@ -60,20 +60,26 @@ let currentTool: "marker" | "sticker" = "marker";
 let currentSticker = "😀";
 let currentCommand: MarkerLineCommand | null = null; // Add this line to maintain the current drawing command
 
+//step 12 color
+let currentColor = "#000000";
+
 //Step 7 tool class
 class ToolPreview implements Preview {
   private x: number;
   private y: number;
   private size: number;
+  private color: string;
 
-  constructor(x: number, y: number, size: number) {
+  constructor(x: number, y: number, size: number, color: string) {
     this.x = x;
     this.y = y;
     this.size = size;
+    this.color = color;
   }
 
   draw(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
+    ctx.strokeStyle = this.color;
     ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
     ctx.stroke();
   }
@@ -119,6 +125,16 @@ class StickerCommand implements Command {
   }
 }
 
+// Update event handler for Thin and Thick buttons
+const randomColor = () => {
+  const letters = "0123456789ABCDEF";
+  let color = "#";
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+};
+
 // Function to redraw the canvas based on stored points
 const redrawCanvas = () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -141,7 +157,11 @@ canvas.addEventListener("mousedown", (event) => {
   const y = event.clientY - canvas.offsetTop;
   if (currentTool === "marker") {
     currentStroke = [{ x, y }];
-    currentCommand = new MarkerLineCommand(currentStroke[0], currentThickness); // Initialize the command here
+    currentCommand = new MarkerLineCommand(
+      currentStroke[0],
+      currentThickness,
+      currentColor
+    ); // Initialize the command with color
   } else {
     const newCommand = new StickerCommand({ x, y }, currentSticker);
     undoStack.push(newCommand);
@@ -154,7 +174,7 @@ canvas.addEventListener("mousemove", (event) => {
   const x = event.clientX - canvas.offsetLeft;
   const y = event.clientY - canvas.offsetTop;
   if (currentTool === "marker") {
-    toolPreview = new ToolPreview(x, y, currentThickness);
+    toolPreview = new ToolPreview(x, y, currentThickness, currentColor);
     if (drawing && currentCommand !== null) {
       // Check if drawing is true and currentCommand is not null
       currentStroke.push({ x, y });
@@ -187,10 +207,16 @@ canvas.addEventListener("mouseup", () => {
 class MarkerLineCommand implements Command {
   private points: { x: number; y: number }[] = [];
   private thickness: number;
+  private color: string;
 
-  constructor(initialPoint: { x: number; y: number }, thickness: number) {
+  constructor(
+    initialPoint: { x: number; y: number },
+    thickness: number,
+    color: string
+  ) {
     this.points.push(initialPoint);
     this.thickness = thickness;
+    this.color = color;
   }
 
   // Method to add a point to the line
@@ -202,6 +228,7 @@ class MarkerLineCommand implements Command {
   display(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
     ctx.lineWidth = this.thickness; // Set line thickness
+    ctx.strokeStyle = this.color;
     ctx.moveTo(this.points[0].x, this.points[0].y);
     this.points.forEach((point) => {
       ctx.lineTo(point.x, point.y);
@@ -253,6 +280,7 @@ thinButton.innerHTML = "Thin";
 thinButton.addEventListener("click", () => {
   currentTool = "marker";
   currentThickness = thinThickness;
+  currentColor = randomColor(); // Generate a random color
   thinButton.classList.add("selectedTool");
   thickButton.classList.remove("selectedTool");
 });
@@ -264,6 +292,7 @@ thickButton.innerHTML = "Thick";
 thickButton.addEventListener("click", () => {
   currentTool = "marker";
   currentThickness = thickThickness;
+  currentColor = randomColor(); // Generate a random color
   thickButton.classList.add("selectedTool");
   thinButton.classList.remove("selectedTool");
 });
