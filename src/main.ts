@@ -1,6 +1,17 @@
 // Import the CSS file
 import "./style.css";
 
+// Common interface for commands
+interface Command {
+  drag(x: number, y: number): void;
+  display(ctx: CanvasRenderingContext2D): void;
+}
+
+// Common interface for previews
+interface Preview {
+  draw(ctx: CanvasRenderingContext2D): void;
+}
+
 // Get the app container
 const app: HTMLDivElement = document.querySelector("#app")!;
 
@@ -32,9 +43,18 @@ let currentThickness = 1;
 const drawEvent = new Event("drawing-changed");
 const toolMovedEvent = new Event("tool-moved"); // Custom event for tool moved
 
-let toolPreview: ToolPreview | null = null; // Global variable for Tool Preview
+//step 7 global
+let toolPreview: Preview | null = null; // Global variable for Tool Preview
+//step 8 global
+// Variable to hold the type of tool currently selected ('marker' or 'sticker')
+let currentTool: "marker" | "sticker" = "marker";
 
-class ToolPreview {
+// Variable to hold the current sticker
+let currentSticker = "😀";
+let currentCommand: MarkerLineCommand | null = null; // Add this line to maintain the current drawing command
+
+//Step 7 tool class
+class ToolPreview implements Preview {
   private x: number;
   private y: number;
   private size: number;
@@ -49,6 +69,46 @@ class ToolPreview {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
     ctx.stroke();
+  }
+}
+
+// Step 8 Class for Sticker Preview
+class StickerPreview implements Preview {
+  private x: number;
+  private y: number;
+  private sticker: string;
+
+  constructor(x: number, y: number, sticker: string) {
+    this.x = x;
+    this.y = y;
+    this.sticker = sticker;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.font = "30px Arial";
+    ctx.fillText(this.sticker, this.x, this.y);
+  }
+}
+
+class StickerCommand implements Command {
+  private x: number;
+  private y: number;
+  private sticker: string;
+
+  constructor(initialPoint: { x: number; y: number }, sticker: string) {
+    this.x = initialPoint.x;
+    this.y = initialPoint.y;
+    this.sticker = sticker;
+  }
+
+  drag(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.font = "30px Arial";
+    ctx.fillText(this.sticker, this.x, this.y);
   }
 }
 
@@ -72,32 +132,52 @@ canvas.addEventListener("mousedown", (event) => {
   drawing = true;
   const x = event.clientX - canvas.offsetLeft;
   const y = event.clientY - canvas.offsetTop;
-  currentStroke = [{ x, y }];
+  if (currentTool === "marker") {
+    currentStroke = [{ x, y }];
+    currentCommand = new MarkerLineCommand(currentStroke[0], currentThickness); // Initialize the command here
+  } else {
+    const newCommand = new StickerCommand({ x, y }, currentSticker);
+    undoStack.push(newCommand);
+    canvas.dispatchEvent(drawEvent);
+  }
 });
 
 // Handle mouse move event
 canvas.addEventListener("mousemove", (event) => {
   const x = event.clientX - canvas.offsetLeft;
   const y = event.clientY - canvas.offsetTop;
-  if (!drawing) {
+  if (currentTool === "marker") {
     toolPreview = new ToolPreview(x, y, currentThickness);
-    canvas.dispatchEvent(toolMovedEvent);
+    if (drawing && currentCommand !== null) {
+      // Check if drawing is true and currentCommand is not null
+      currentStroke.push({ x, y });
+      currentCommand.drag(x, y); // Update the currentCommand with the new point
+      canvas.dispatchEvent(drawEvent); // Trigger the redraw
+    }
   } else {
-    currentStroke.push({ x, y });
+    toolPreview = new StickerPreview(x, y, currentSticker);
+  }
+  if (!drawing) {
+    canvas.dispatchEvent(toolMovedEvent);
+  } else if (currentTool === "sticker") {
+    const lastCommand = undoStack[undoStack.length - 1] as StickerCommand;
+    lastCommand.drag(x, y);
+    canvas.dispatchEvent(drawEvent);
   }
 });
 
-// Update mouse up event to push stroke to undoStack
 canvas.addEventListener("mouseup", () => {
   drawing = false;
-  const newCommand = new MarkerLineCommand(currentStroke[0], currentThickness);
-  currentStroke.slice(1).forEach((point) => newCommand.drag(point.x, point.y));
-  undoStack.push(newCommand);
+  if (currentTool === "marker" && currentCommand !== null) {
+    undoStack.push(currentCommand);
+    currentCommand = null; // Reset the current command
+    currentStroke = []; // Clear the current stroke
+  }
   canvas.dispatchEvent(drawEvent);
 });
 
 // Command class for Marker Line
-class MarkerLineCommand {
+class MarkerLineCommand implements Command {
   private points: { x: number; y: number }[] = [];
   private thickness: number;
 
@@ -124,8 +204,8 @@ class MarkerLineCommand {
 }
 
 // Modify the undoStack and redoStack to hold MarkerLineCommand objects instead of points
-const undoStack: MarkerLineCommand[] = [];
-const redoStack: MarkerLineCommand[] = [];
+const undoStack: Command[] = [];
+const redoStack: Command[] = [];
 
 // Create and append Clear button
 const clearButton = document.createElement("button");
@@ -164,6 +244,7 @@ app.appendChild(redoButton);
 const thinButton = document.createElement("button");
 thinButton.innerHTML = "Thin";
 thinButton.addEventListener("click", () => {
+  currentTool = "marker"; // Add this line
   currentThickness = 1;
   thinButton.classList.add("selectedTool");
   thickButton.classList.remove("selectedTool");
@@ -174,8 +255,22 @@ app.appendChild(thinButton);
 const thickButton = document.createElement("button");
 thickButton.innerHTML = "Thick";
 thickButton.addEventListener("click", () => {
+  currentTool = "marker"; // Add this line
   currentThickness = 5;
   thickButton.classList.add("selectedTool");
   thinButton.classList.remove("selectedTool");
 });
 app.appendChild(thickButton);
+
+// Create and append sticker buttons
+const stickers = ["😀", "😎", "🤓"];
+stickers.forEach((sticker) => {
+  const stickerButton = document.createElement("button");
+  stickerButton.innerHTML = sticker;
+  stickerButton.addEventListener("click", () => {
+    currentTool = "sticker";
+    currentSticker = sticker;
+    canvas.dispatchEvent(toolMovedEvent);
+  });
+  app.appendChild(stickerButton);
+});
