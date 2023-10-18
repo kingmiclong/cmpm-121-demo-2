@@ -263,8 +263,10 @@ thickButton.addEventListener("click", () => {
 app.appendChild(thickButton);
 
 // Create and append sticker buttons
-const stickers = ["😀", "😎", "🤓"];
-stickers.forEach((sticker) => {
+const stickers = ["😀", "😎", "🤓"]; // Moved this line up before the creation of customStickerButton for better visibility
+
+// Function to create and append a sticker button
+const createStickerButton = (sticker: string) => {
   const stickerButton = document.createElement("button");
   stickerButton.innerHTML = sticker;
   stickerButton.addEventListener("click", () => {
@@ -273,4 +275,22 @@ stickers.forEach((sticker) => {
     canvas.dispatchEvent(toolMovedEvent);
   });
   app.appendChild(stickerButton);
+};
+
+// Create default sticker buttons
+stickers.forEach(createStickerButton);
+
+// Create and append custom sticker button
+//console.log("Creating custom sticker button");
+const customStickerButton = document.createElement("button");
+customStickerButton.innerHTML = "Custom Sticker";
+customStickerButton.addEventListener("click", () => {
+  // console.log("Custom sticker button clicked");
+  const newSticker = prompt("Enter your custom sticker:", "");
+  if (newSticker !== null && newSticker.trim() !== "") {
+    stickers.push(newSticker);
+    createStickerButton(newSticker); // Create a new sticker button
+  }
 });
+app.appendChild(customStickerButton);
+console.log("Custom sticker button appended");
