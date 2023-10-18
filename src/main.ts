@@ -26,6 +26,9 @@ const ctx = canvas.getContext("2d")!;
 let drawing = false;
 let currentStroke: { x: number; y: number }[] = [];
 let allStrokes: { x: number; y: number }[][] = [];
+// Stacks to hold undo and redo strokes
+const undoStack: { x: number; y: number }[][] = [];
+const redoStack: { x: number; y: number }[][] = [];
 
 // Custom event to notify changes in drawing
 const drawEvent = new Event("drawing-changed");
@@ -65,11 +68,12 @@ canvas.addEventListener("mousemove", (event) => {
   currentStroke.push({ x, y });
 });
 
-// Handle mouse up event
+// Update mouse up event to push stroke to undoStack
 canvas.addEventListener("mouseup", () => {
   drawing = false;
+  undoStack.push(currentStroke);
   allStrokes.push(currentStroke);
-  canvas.dispatchEvent(drawEvent); // Trigger drawing change
+  canvas.dispatchEvent(drawEvent);
 });
 
 // Create and append Clear button
@@ -81,3 +85,30 @@ clearButton.addEventListener("click", () => {
 });
 
 app.appendChild(clearButton);
+
+// Create and append Undo button
+const undoButton = document.createElement("button");
+undoButton.innerHTML = "Undo";
+undoButton.addEventListener("click", () => {
+  if (undoStack.length > 0) {
+    const lastStroke = undoStack.pop()!;
+    redoStack.push(lastStroke);
+    allStrokes = undoStack.slice();
+    canvas.dispatchEvent(drawEvent); // Redraw
+  }
+});
+
+// Create and append Redo button
+const redoButton = document.createElement("button");
+redoButton.innerHTML = "Redo";
+redoButton.addEventListener("click", () => {
+  if (redoStack.length > 0) {
+    const lastStroke = redoStack.pop()!;
+    undoStack.push(lastStroke);
+    allStrokes = undoStack.slice();
+    canvas.dispatchEvent(drawEvent); // Redraw
+  }
+});
+
+app.appendChild(undoButton);
+app.appendChild(redoButton);
