@@ -30,6 +30,27 @@ let currentThickness = 1;
 
 // Custom event to notify changes in drawing
 const drawEvent = new Event("drawing-changed");
+const toolMovedEvent = new Event("tool-moved"); // Custom event for tool moved
+
+let toolPreview: ToolPreview | null = null; // Global variable for Tool Preview
+
+class ToolPreview {
+  private x: number;
+  private y: number;
+  private size: number;
+
+  constructor(x: number, y: number, size: number) {
+    this.x = x;
+    this.y = y;
+    this.size = size;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
+}
 
 // Function to redraw the canvas based on stored points
 const redrawCanvas = () => {
@@ -37,10 +58,14 @@ const redrawCanvas = () => {
   undoStack.forEach((command) => {
     command.display(ctx);
   });
+  if (!drawing && toolPreview !== null) {
+    toolPreview.draw(ctx);
+  }
 };
 
 // Listen for custom drawing-changed event and redraw canvas
 canvas.addEventListener("drawing-changed", redrawCanvas);
+canvas.addEventListener("tool-moved", redrawCanvas);
 
 // Handle mouse down event
 canvas.addEventListener("mousedown", (event) => {
@@ -52,10 +77,14 @@ canvas.addEventListener("mousedown", (event) => {
 
 // Handle mouse move event
 canvas.addEventListener("mousemove", (event) => {
-  if (!drawing) return;
   const x = event.clientX - canvas.offsetLeft;
   const y = event.clientY - canvas.offsetTop;
-  currentStroke.push({ x, y });
+  if (!drawing) {
+    toolPreview = new ToolPreview(x, y, currentThickness);
+    canvas.dispatchEvent(toolMovedEvent);
+  } else {
+    currentStroke.push({ x, y });
+  }
 });
 
 // Update mouse up event to push stroke to undoStack
@@ -104,9 +133,8 @@ clearButton.innerHTML = "Clear";
 clearButton.addEventListener("click", () => {
   undoStack.length = 0;
   redoStack.length = 0;
-  canvas.dispatchEvent(drawEvent); // Redraw the canvas
+  canvas.dispatchEvent(drawEvent); // Redraw
 });
-
 app.appendChild(clearButton);
 
 // Create and append Undo button
@@ -119,7 +147,7 @@ undoButton.addEventListener("click", () => {
     canvas.dispatchEvent(drawEvent); // Redraw
   }
 });
-
+app.appendChild(undoButton);
 // Create and append Redo button
 const redoButton = document.createElement("button");
 redoButton.innerHTML = "Redo";
@@ -130,8 +158,6 @@ redoButton.addEventListener("click", () => {
     canvas.dispatchEvent(drawEvent); // Redraw
   }
 });
-
-app.appendChild(undoButton);
 app.appendChild(redoButton);
 
 // Create and append Thin button
@@ -139,7 +165,7 @@ const thinButton = document.createElement("button");
 thinButton.innerHTML = "Thin";
 thinButton.addEventListener("click", () => {
   currentThickness = 1;
-  thinButton.classList.add("selectedTool"); // Optional: Add CSS class for visual feedback
+  thinButton.classList.add("selectedTool");
   thickButton.classList.remove("selectedTool");
 });
 app.appendChild(thinButton);
@@ -149,7 +175,7 @@ const thickButton = document.createElement("button");
 thickButton.innerHTML = "Thick";
 thickButton.addEventListener("click", () => {
   currentThickness = 5;
-  thickButton.classList.add("selectedTool"); // Optional: Add CSS class for visual feedback
+  thickButton.classList.add("selectedTool");
   thinButton.classList.remove("selectedTool");
 });
 app.appendChild(thickButton);
