@@ -30,6 +30,11 @@ canvas.width = 256;
 canvas.height = 256;
 app.appendChild(canvas);
 
+// Create button container
+const buttonContainer = document.createElement("div");
+buttonContainer.id = "button-container";
+app.appendChild(buttonContainer);
+
 // Get the 2D context of the canvas
 const ctx = canvas.getContext("2d")!;
 
@@ -217,7 +222,7 @@ clearButton.addEventListener("click", () => {
   redoStack.length = 0;
   canvas.dispatchEvent(drawEvent); // Redraw
 });
-app.appendChild(clearButton);
+buttonContainer.appendChild(clearButton);
 
 // Create and append Undo button
 const undoButton = document.createElement("button");
@@ -229,7 +234,7 @@ undoButton.addEventListener("click", () => {
     canvas.dispatchEvent(drawEvent); // Redraw
   }
 });
-app.appendChild(undoButton);
+buttonContainer.appendChild(undoButton);
 // Create and append Redo button
 const redoButton = document.createElement("button");
 redoButton.innerHTML = "Redo";
@@ -240,7 +245,7 @@ redoButton.addEventListener("click", () => {
     canvas.dispatchEvent(drawEvent); // Redraw
   }
 });
-app.appendChild(redoButton);
+buttonContainer.appendChild(redoButton);
 
 // Create and append Thin button
 const thinButton = document.createElement("button");
@@ -251,7 +256,7 @@ thinButton.addEventListener("click", () => {
   thinButton.classList.add("selectedTool");
   thickButton.classList.remove("selectedTool");
 });
-app.appendChild(thinButton);
+buttonContainer.appendChild(thinButton);
 
 // Create and append Thick button
 const thickButton = document.createElement("button");
@@ -262,7 +267,7 @@ thickButton.addEventListener("click", () => {
   thickButton.classList.add("selectedTool");
   thinButton.classList.remove("selectedTool");
 });
-app.appendChild(thickButton);
+buttonContainer.appendChild(thickButton);
 
 // Create and append sticker buttons
 const stickers = ["😀", "😎", "🐱"]; // Moved this line up before the creation of customStickerButton for better visibility
@@ -276,7 +281,7 @@ const createStickerButton = (sticker: string) => {
     currentSticker = sticker;
     canvas.dispatchEvent(toolMovedEvent);
   });
-  app.appendChild(stickerButton);
+  buttonContainer.appendChild(stickerButton);
 };
 
 // Create default sticker buttons
@@ -294,7 +299,7 @@ customStickerButton.addEventListener("click", () => {
     createStickerButton(newSticker); // Create a new sticker button
   }
 });
-app.appendChild(customStickerButton);
+buttonContainer.appendChild(customStickerButton);
 console.log("Custom sticker button appended");
 
 // Create and append Export button
@@ -319,4 +324,4 @@ exportButton.addEventListener("click", () => {
   link.href = exportCanvas.toDataURL("image/png");
   link.click();
 });
-app.appendChild(exportButton);
+buttonContainer.appendChild(exportButton);
