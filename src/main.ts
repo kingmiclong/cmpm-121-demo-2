@@ -37,7 +37,9 @@ const ctx = canvas.getContext("2d")!;
 let drawing = false;
 let currentStroke: { x: number; y: number }[] = [];
 // let allStrokes: { x: number; y: number }[][] = [];
-let currentThickness = 1;
+let currentThickness = 2;
+const thinThickness = 1;
+const thickThickness = 8;
 
 // Custom event to notify changes in drawing
 const drawEvent = new Event("drawing-changed");
@@ -85,7 +87,7 @@ class StickerPreview implements Preview {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.font = "30px Arial";
+    ctx.font = "48px Arial";
     ctx.fillText(this.sticker, this.x, this.y);
   }
 }
@@ -107,7 +109,7 @@ class StickerCommand implements Command {
   }
 
   display(ctx: CanvasRenderingContext2D) {
-    ctx.font = "30px Arial";
+    ctx.font = "48px Arial";
     ctx.fillText(this.sticker, this.x, this.y);
   }
 }
@@ -244,8 +246,8 @@ app.appendChild(redoButton);
 const thinButton = document.createElement("button");
 thinButton.innerHTML = "Thin";
 thinButton.addEventListener("click", () => {
-  currentTool = "marker"; // Add this line
-  currentThickness = 1;
+  currentTool = "marker";
+  currentThickness = thinThickness;
   thinButton.classList.add("selectedTool");
   thickButton.classList.remove("selectedTool");
 });
@@ -255,15 +257,15 @@ app.appendChild(thinButton);
 const thickButton = document.createElement("button");
 thickButton.innerHTML = "Thick";
 thickButton.addEventListener("click", () => {
-  currentTool = "marker"; // Add this line
-  currentThickness = 5;
+  currentTool = "marker";
+  currentThickness = thickThickness;
   thickButton.classList.add("selectedTool");
   thinButton.classList.remove("selectedTool");
 });
 app.appendChild(thickButton);
 
 // Create and append sticker buttons
-const stickers = ["😀", "😎", "🤓"]; // Moved this line up before the creation of customStickerButton for better visibility
+const stickers = ["😀", "😎", "🐱"]; // Moved this line up before the creation of customStickerButton for better visibility
 
 // Function to create and append a sticker button
 const createStickerButton = (sticker: string) => {
