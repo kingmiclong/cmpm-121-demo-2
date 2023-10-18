@@ -299,22 +299,45 @@ thickButton.addEventListener("click", () => {
 buttonContainer.appendChild(thickButton);
 
 // Create and append sticker buttons
-const stickers = ["😀", "😎", "🐱"]; // Moved this line up before the creation of customStickerButton for better visibility
+const savedStickersString = localStorage.getItem("customStickers");
+const savedStickers: string[] = savedStickersString
+  ? (JSON.parse(savedStickersString) as string[])
+  : [];
+
+const stickers = ["😀", "😎", "🐱", ...(savedStickers ?? [])]; // Moved this line up before the creation of customStickerButton for better visibility
 
 // Function to create and append a sticker button
-const createStickerButton = (sticker: string) => {
+const createStickerButton = (sticker: string, isCustom = false) => {
   const stickerButton = document.createElement("button");
   stickerButton.innerHTML = sticker;
-  stickerButton.addEventListener("click", () => {
-    currentTool = "sticker";
-    currentSticker = sticker;
-    canvas.dispatchEvent(toolMovedEvent);
+  if (isCustom) {
+    stickerButton.title = "Hold Shift and click to remove"; // hovering over to see how to remvoe the button.
+  }
+  stickerButton.addEventListener("click", (event) => {
+    if (event.shiftKey && isCustom) {
+      // Remove custom sticker
+      const index = stickers.indexOf(sticker);
+      if (index > -1) {
+        stickers.splice(index, 1);
+        localStorage.setItem(
+          "customStickers",
+          JSON.stringify(stickers.slice(3))
+        ); // Update localStorage
+        stickerButton.remove(); // Remove the button
+      }
+    } else {
+      // Select sticker
+      currentTool = "sticker";
+      currentSticker = sticker;
+      canvas.dispatchEvent(toolMovedEvent);
+    }
   });
   buttonContainer.appendChild(stickerButton);
 };
 
 // Create default sticker buttons
-stickers.forEach(createStickerButton);
+stickers.slice(0, 3).forEach((sticker) => createStickerButton(sticker));
+stickers.slice(3).forEach((sticker) => createStickerButton(sticker, true));
 
 // Create and append custom sticker button
 //console.log("Creating custom sticker button");
@@ -325,7 +348,8 @@ customStickerButton.addEventListener("click", () => {
   const newSticker = prompt("Enter your custom sticker:", "");
   if (newSticker !== null && newSticker.trim() !== "") {
     stickers.push(newSticker);
-    createStickerButton(newSticker); // Create a new sticker button
+    createStickerButton(newSticker);
+    localStorage.setItem("customStickers", JSON.stringify(stickers.slice(3))); // Save custom stickers only
   }
 });
 buttonContainer.appendChild(customStickerButton);
