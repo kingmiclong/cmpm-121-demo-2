@@ -26,9 +26,6 @@ const ctx = canvas.getContext("2d")!;
 let drawing = false;
 let currentStroke: { x: number; y: number }[] = [];
 let allStrokes: { x: number; y: number }[][] = [];
-// Stacks to hold undo and redo strokes
-const undoStack: { x: number; y: number }[][] = [];
-const redoStack: { x: number; y: number }[][] = [];
 
 // Custom event to notify changes in drawing
 const drawEvent = new Event("drawing-changed");
@@ -36,17 +33,9 @@ const drawEvent = new Event("drawing-changed");
 // Function to redraw the canvas based on stored points
 const redrawCanvas = () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.beginPath();
-  // Iterate through all strokes and draw them
-  allStrokes.forEach((stroke) => {
-    if (stroke.length === 0) return;
-    ctx.moveTo(stroke[0].x, stroke[0].y);
-    stroke.forEach((point) => {
-      ctx.lineTo(point.x, point.y);
-    });
-    ctx.stroke();
+  undoStack.forEach((command) => {
+    command.display(ctx);
   });
-  ctx.closePath();
 };
 
 // Listen for custom drawing-changed event and redraw canvas
@@ -71,10 +60,40 @@ canvas.addEventListener("mousemove", (event) => {
 // Update mouse up event to push stroke to undoStack
 canvas.addEventListener("mouseup", () => {
   drawing = false;
-  undoStack.push(currentStroke);
+  const newCommand = new MarkerLineCommand(currentStroke[0]);
+  currentStroke.slice(1).forEach((point) => newCommand.drag(point.x, point.y));
+  undoStack.push(newCommand);
   allStrokes.push(currentStroke);
   canvas.dispatchEvent(drawEvent);
 });
+
+// Command class for Marker Line
+class MarkerLineCommand {
+  private points: { x: number; y: number }[] = [];
+
+  constructor(initialPoint: { x: number; y: number }) {
+    this.points.push(initialPoint);
+  }
+
+  // Method to add a point to the line
+  drag(x: number, y: number) {
+    this.points.push({ x, y });
+  }
+
+  // Method to display the line on the canvas
+  display(ctx: CanvasRenderingContext2D) {
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    this.points.forEach((point) => {
+      ctx.lineTo(point.x, point.y);
+    });
+    ctx.stroke();
+  }
+}
+
+// Modify the undoStack and redoStack to hold MarkerLineCommand objects instead of points
+const undoStack: MarkerLineCommand[] = [];
+const redoStack: MarkerLineCommand[] = [];
 
 // Create and append Clear button
 const clearButton = document.createElement("button");
@@ -91,9 +110,8 @@ const undoButton = document.createElement("button");
 undoButton.innerHTML = "Undo";
 undoButton.addEventListener("click", () => {
   if (undoStack.length > 0) {
-    const lastStroke = undoStack.pop()!;
-    redoStack.push(lastStroke);
-    allStrokes = undoStack.slice();
+    const lastCommand = undoStack.pop()!;
+    redoStack.push(lastCommand);
     canvas.dispatchEvent(drawEvent); // Redraw
   }
 });
@@ -103,9 +121,8 @@ const redoButton = document.createElement("button");
 redoButton.innerHTML = "Redo";
 redoButton.addEventListener("click", () => {
   if (redoStack.length > 0) {
-    const lastStroke = redoStack.pop()!;
-    undoStack.push(lastStroke);
-    allStrokes = undoStack.slice();
+    const lastCommand = redoStack.pop()!;
+    undoStack.push(lastCommand);
     canvas.dispatchEvent(drawEvent); // Redraw
   }
 });
