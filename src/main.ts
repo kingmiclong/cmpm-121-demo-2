@@ -294,3 +294,27 @@ customStickerButton.addEventListener("click", () => {
 });
 app.appendChild(customStickerButton);
 console.log("Custom sticker button appended");
+
+// Create and append Export button
+const exportButton = document.createElement("button");
+exportButton.innerHTML = "Export";
+exportButton.addEventListener("click", () => {
+  // Create a new canvas and scale it
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = 1024;
+  exportCanvas.height = 1024;
+  const exportCtx = exportCanvas.getContext("2d")!;
+  exportCtx.scale(4, 4); // Scale by 4
+
+  // Draw the existing commands on this new canvas
+  undoStack.forEach((command) => {
+    command.display(exportCtx);
+  });
+
+  // credit stackflow png download
+  const link = document.createElement("a");
+  link.download = "exported_drawing.png";
+  link.href = exportCanvas.toDataURL("image/png");
+  link.click();
+});
+app.appendChild(exportButton);
